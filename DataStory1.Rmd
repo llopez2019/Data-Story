@@ -1,0 +1,227 @@
+---
+title: "Trending Videos (Data Story)"
+output: html_document
+---
+
+The data set that I used comes from kaggle.com the original data set has 40,881 observations and 14 variables.  This data set includes trending videos in 2017 and 2018.  Since I want to become a YouTube personality, I explore information regarding how videos start to trend.  Looking at the likes, dislikes, view and comments, the data set seems to have valuable information.  This dat stroy incompasses the data wrangling process and the statistical analysis.  Additional information regarding the machine learning possiblities is also explored.
+
+The First step in for any project is to install and load the necessary packages by declaring the libraries. The plyr package is to be used to select the variables in the clean data and the tidy verse for most of the other functions.  Tidyverse is considered the swiss knife because of its unlimited capabilities.  All packages used in the data wrangling process and the statistics are loaded into the console.
+```{r}
+library(tidyverse) #The swiss knife!
+library(ggplot2)
+library(rmarkdown)
+library(dplyr)
+library(tidyr)
+```
+
+To begin the cleaning process, we take a peek at the working directory with the getwd() function.  If the working directory is not set to read the files, then the working directory has to be changed.  The working directory is confirmed, and the data is imported.
+
+```{r}
+getwd()
+df <- read.csv("YouTube.csv")
+```
+
+```{r}
+str(df)
+```
+The view function gives a table of all observations and variables. Some of the variables were easier to understand than others. The varialbes such as likes, dislikes, comment count, and views were plainly understood. The other variables did not have units specified, which makes it hard to interpret. There are missing variables in the data set labeled as NA.  Let's take a glimpse of the data set.
+
+The glimpse function provides more concise information regarding the data set.  A glimpse of the data set is called to determine the type of variables and ensure that the data set is correct.
+
+```{r}
+glimpse(df)
+```
+The table shows that there is 14 variables and 40,881 observations.  The variables are labelled as factor,integer, and lgl.  
+
+
+## Data Wrangling
+Data wrangling is one of the most essential parts of a data science project. Data wrangling is the process of mapping data from raw to a format appropriate for the data to be analyzed. Data wrangling consists of selecting, indexing, and mutating the tables to form them for your need. This process helps with better decision making, but it takes a long time to complete.  If it is done correctly, then a data scientist life is made easier.   These steps will help to deliver more accurate results.  The data used contained 14 variables and 40,881 observations. They are multiple techniques used to clean and conform the data before the analysis. The packages have been loaded in a previous code chunk.  The loaded packages allow syntax that is simple to use when cleaning the data.  The first step is to remove unnecessary variables which are the columns of the data set.   Once the columns are removed, the data set is reviewed using the glimpse function.
+
+
+```{r}
+df <- df[c(-1,-4,-5,-6,-7,-12,-13,-14,-15,-16)]
+glimpse(df)
+nrow(df)
+```
+The table shows that there is 6 variables and 40,881 observations.  The variables are labelled as factor and integer.  By removing insignificant variables from the data frame, the new data set contains the variables trending date, title likes, view, dislikes, and comment count. Theses variable provides information pertinent information regarding the trending videos. 
+
+Next, we determine what to do with missing variables.  There are several ways to handle the missing variables.  Since the data is large, we omit the variables with missing data. To do this NA is changed to 0 and then 0 is omitted them. The omit function is used to remove the variable with missing data values. 
+
+```{r}
+df[df == 0] <- NA
+df <- na.omit(df)
+glimpse(df)
+```
+
+Since the missing data values have been deleted the number of observations are minimized.  The table shows that there is 6 variables and 39,924 observations.  The variables are labelled as factor and integer.  The data is numerical. Thus we look at a summary of the data.
+
+```{r}
+mean(df$views)
+summary(df$views)
+```
+
+The mean number of views is 1,153,527.  The data set has a minimum value of 1023 and a maximum value of 137,843,120.  The range of these values is large.  The value 1023 doesn't seem logical for a trending video.  Thus a filter is created to include only observations at a certain threshold.  This threshold is 148,818, the mean of the first quartile. The new dat frame is called df_1.
+
+```{r}
+df_1<-df %>% filter(views>=148818)
+glimpse(df_1)
+```
+
+The table shows that the data set df_1 has 6 variables and 29,943 observations.  Let's take a look at the summary of df_1 to view the changes in the mean number of views.
+
+
+```{r}
+summary(df_1$views)
+```
+
+There is evidence that some trending videos are more popular than others.  A popularity index is created to distinguish between highly trending and trending videos based on the number of views. The threshold is selected to be 586,076 the medeian number of views.
+
+```{r}
+df_1$Popularity_Index <- ifelse(( df_1$views >= 586076), '1', '0')
+```
+
+We take one last look at the clean data set and write it to the console.
+
+
+```{r}
+glimpse(df_1)
+write.csv(df_1, file = "df_1clean.csv")
+```
+
+The clean data set has 7 variables and 29,943 observations.  The clean data set is called df_1clean.
+
+
+##  Statistics
+
+Now that the data set is cleaned, it is time for the statistical analysis. This analysis is the exploratory portion of the project. At this time, we are trying to find trends in the project data based on the facts and develop a solid hypothesis. In this portion of the coding in R, plots are created and analyzed. A deep analysis of the trending videos is investigated.  Teh following code confirms that the correct data set is used.
+
+```{r}
+df_1clean <- read.csv("df_1clean.csv")
+df_1clean <- select(df_1clean, -c(X))
+glimpse(df_1clean)
+
+```
+
+
+The table shows that there is 7 variables and 29,943 observations.  The variables are labelled as factor and integer.  
+
+Since there is an enormous amount of data for trending videos, the means of each variable is explored.  The code to find the means is written below.
+
+
+
+```{r}
+
+daily_means <- df_1clean  %>%
+  group_by(trending_date) %>%
+  summarise(n_title = n(),
+            mean_likes = mean(likes),
+             mean_views = mean(views),
+             mean_dislikes = mean(dislikes),
+            mean_comment_count = mean(comment_count))
+daily_means
+
+```
+
+The mean for the variables, likes, dislikes, views, and comment_count is collect for each trending date.  The table also shows the number of videos per date.  A graphical analysis of the means is annotated in the code below.  We conduct this anlysis as it reduces the number of data points and patterns can be seen.  
+
+
+```{r}
+
+ggplot(daily_means, aes(y = mean_views, x = mean_likes, color=mean_dislikes)) + geom_point() + geom_jitter()
+
+ggplot(daily_means, aes(y = mean_views, x = mean_likes, color=(mean_comment_count))) + geom_point() + geom_jitter()
+
+ggplot(daily_means, aes(y = mean_views, x = mean_comment_count,  color=mean_dislikes)) + geom_point() + geom_jitter()
+
+ggplot(daily_means, aes(y = mean_views, x = mean_dislikes,color=mean_comment_count)) + geom_point() + geom_jitter()
+
+```
+The plots show strong positive relationships between the means of the independent and dependent variables.  Thus there may be a strong correlation between the actual variables.  Note that a trending video that has an extremely large number of likes and views it also has a vast amount of dislikes and comments.  
+
+
+
+
+
+
+
+
+```{r}
+bp <- ggplot(df_1clean, aes(x=Popularity_Index, y=likes, fill=Popularity_Index)) + 
+  geom_boxplot()+
+  labs(title="Plot of Views Given Likes",x="Popularity Index", y = "Number of Views")+
+scale_x_discrete(limits=c("Popular", "Highly Popular"))
+bp + theme_classic()
+```
+
+There are too many outliers to use a box plot :( .  I leave it to show the complete anlysis that was conducted.
+
+
+
+Let's take a look at the Popularity_Index variable that was created.
+```{r}
+df_1clean$Popularity_Index <- ifelse(df_1clean$Popularity_Index == 1, 'Highly Popular', 'Popular')
+ggplot(df_1clean, aes(x = likes, y = views, color=Popularity_Index)) +
+  geom_point() + geom_jitter()
+
+ggplot(df_1clean, aes(x = dislikes, y = views, color=Popularity_Index)) +
+  geom_point() + geom_jitter()
+
+ggplot(df_1clean, aes(x = comment_count, y = views, color=Popularity_Index)) +
+  geom_point() + geom_jitter()
+```
+
+Recall that the variables Popularity _Index was determined by the mean of views in the original data set.  It seems as if the clean data set includes the majority of highly popular videos.  Looking at the plots there are only a few popular trending videos as indicated by the small splash of mint green.
+
+
+```{r}
+ hist_plot <-
+   df_1clean %>%
+     ggplot(aes(x = views)) +
+     geom_histogram(color = "maroon", fill = "dodgerblue", bins = 205)
+  print(hist_plot)
+  
+  hist_plot <-
+   df_1clean %>%
+     ggplot(aes(x = likes)) +
+     geom_histogram(color = "maroon", fill = "dodgerblue", bins = 205)
+  print(hist_plot)
+  
+  hist_plot <-
+   df_1clean %>%
+     ggplot(aes(x = dislikes)) +
+     geom_histogram(color = "maroon", fill = "dodgerblue", bins = 205)
+  print(hist_plot)
+  
+  hist_plot <-
+   df_1clean %>%
+     ggplot(aes(x = comment_count)) +
+     geom_histogram(color = "maroon", fill = "dodgerblue", bins = 205)
+  print(hist_plot)
+  
+  
+```
+In the histograms, 205 bins were used because there were 205 dates.  The histograms generally have the same shape. The number of dislikes is fewer than any other variable. The variable views have a more extensive amount spread. Additonal histrograms are shown below.
+
+
+
+
+```{r}
+write.csv(daily_means, file = "daily_means.csv")
+```
+
+## Additional Springboard Questions
+
+1. What important fields and information does the data set have?
+The data set has variables that are positively correlated.  Intuitively, it seems that the variables have a high possibility of providing information regarding trending videos.  Dislikes do not have as much data, but this is expected.
+
+2.  What are its limitations i.e. what are some questions that you cannot answer with this data set?
+YouTube has subscribers, but the number of subscribers is not listed in the data set.  Thus we can not answer any questions or determine a relationship between subscribers and other variables.  Timestamps may have been a variable to view.  It may be that the time the video was uploaded can affect its trending status.  How many shares the video has would also be an excellent variable to have.
+
+3.  What kind of cleaning and wrangling did you need to do?
+this information is listed under the data wrangling section.
+
+4. Any preliminary exploration you’ve performed and your initial findings.
+This information is listed in the statistics section.
+
+5. Based on these findings, what approach are you going to take? 
+The approach for the machine learning portion is apparent now as it was shown in the statistics section that the Popularity_Index seems to be unbalanced.  Thus this is probably not an excellent variable to use for a classification model.  As indicated in the analysis, there is a strong relationship between variables.  The relationship is stronger for the mean of the variables.  Thus it may be of value to run the model on the means instead of the actual data.  This analysis has sparked a possible change in the initial approach.
